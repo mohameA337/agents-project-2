@@ -1,0 +1,78 @@
+kickoff_task:
+  description: >
+    You receive:
+    - TOPIC ({topic})
+    - MANAGER_BRIEF (optional)
+    Summarize the constraints to pass to the pipeline:
+    - audience, intent, tone, target length (words), angle
+    - must-include topics and must-avoid topics
+    Return as a compact checklist (6–10 bullets).
+  expected_output: A compact constraints checklist.
+  agent: input_kickoff
+
+keywords_task:
+  description: >
+    Generate keywords STRICTLY as VALID JSON:
+    {
+      "primary_keywords": ["..."],
+      "secondary_keywords": ["..."],
+      "audience": "string (3–80 chars)",
+      "tone": "informative|persuasive|narrative|technical|casual|formal"
+    }
+    Rules:
+    - Output ONLY one JSON object. No prose.
+    - Tailor to the topic, audience, and tone from kickoff.
+  expected_output: ONE JSON object (no extra text).
+  agent: keyword_instructor
+  context:
+    - kickoff_task
+
+story_task:
+  description: >
+    Write the article/story using ONLY the validated keyword JSON.
+    Requirements:
+    - ~800–1200 words
+    - Structure: Title, Subtitle, Intro, 3–6 sections (H2/H3), Conclusion
+    - Integrate primary+secondary keywords naturally (no stuffing)
+    - Match the requested tone and audience
+    Return Markdown.
+  expected_output: A well-structured Markdown article/story.
+  agent: story_writer
+  markdown: true
+  context:
+    - keywords_task
+    - kickoff_task
+
+evaluate_task:
+  description: >
+    Evaluate the Markdown content. Provide:
+    1) Short critique paragraph
+    2) 3–6 actionable revision bullets
+    3) JSON score block (1–5): clarity, accuracy, structure, keyword_coverage, tone_alignment, overall
+  expected_output: Critique + bullets + a single JSON score block.
+  agent: evaluator
+  markdown: true
+  context:
+    - story_task
+    - keywords_task
+    - kickoff_task
+
+report_task:
+  description: >
+    Produce a final REPORT in Markdown that includes:
+    - Run Header (topic, timestamp)
+    - Constraints Checklist (from kickoff)
+    - Keyword JSON (fenced code block)
+    - Story (Markdown)
+    - Evaluation (critique + bullets + JSON scores)
+    - Verdict: 1 paragraph with pass/fail and next steps
+    Output ONLY the full Markdown report.
+  expected_output: A single, complete Markdown report.
+  agent: reporter
+  markdown: true
+  output_file: output/content_report.md
+  context:
+    - kickoff_task
+    - keywords_task
+    - story_task
+    - evaluate_task
